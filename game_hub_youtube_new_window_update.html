@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Game Hub — Discord, YouTube &amp; 50 Mini-Games</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            hub: {
+              bg: '#070b14',
+              card: '#0f172a',
+              elevated: '#162036',
+              border: '#1e293b',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+    html, body {
+      overflow-x: hidden;
+      background-color: #070b14;
+      color: #f8fafc;
+    }
+
+    /* Subtle custom scrollbar for game grid & modal */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b1220;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #24324d;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #33466b;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(88, 101, 242, 0.28), 0 20px 45px -12px rgba(88, 101, 242, 0.35);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(88, 101, 242, 0.0), 0 24px 55px -10px rgba(88, 101, 242, 0.5);
+      }
+    }
+
+    .discord-hero-glow {
+      animation: pulseGlow 3.2s infinite ease-in-out;
+    }
+
+    #game-stage-canvas {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-hub-bg text-slate-100 font-sans antialiased selection:bg-indigo-500/30 selection:text-indigo-200 flex flex-col">
+
+  <!-- Top Navigation & Sound / Quick Status Bar -->
+  <header class="sticky top-0 z-30 w-full border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-rose-500 text-white font-black shadow-lg shadow-indigo-500/20">
+          GH
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-base sm:text-lg font-extrabold tracking-tight text-white">Game Hub</span>
+            <span class="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2 py-0.5 text-[11px] font-semibold text-indigo-300">
+              50 Mini-Games
+            </span>
+          </div>
+          <p id="top-status-text" class="text-[11px] sm:text-xs text-slate-400">
+            Discord centerpiece, YouTube quick launch &amp; 50 playable browser games
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <a
+          href="#games-section"
+          class="rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2 text-xs sm:text-sm font-semibold text-slate-200 transition hover:border-indigo-400/60 hover:bg-slate-800"
+        >
+          Browse 50 Games
+        </a>
+        <button
+          id="sound-toggle-btn"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2 text-xs sm:text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 active:scale-[0.98]"
+          aria-pressed="false"
+        >
+          <span id="sound-icon" aria-hidden="true">🔊</span>
+          <span id="sound-label">SFX On</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast / Notice Banner (never uses alert()) -->
+  <div id="notice-banner" class="hidden mx-auto mt-4 w-full max-w-5xl px-4 sm:px-6">
+    <div class="flex items-center justify-between gap-4 rounded-2xl border border-amber-500/40 bg-amber-950/50 px-4 py-3 text-xs sm:text-sm text-amber-100 shadow-lg">
+      <div class="flex items-center gap-2.5">
+        <span class="text-base" aria-hidden="true">ℹ️</span>
+        <p id="notice-message" class="leading-snug"></p>
+      </div>
+      <button
+        id="notice-dismiss-btn"
+        type="button"
+        class="rounded-lg border border-amber-400/30 bg-amber-900/40 px-2.5 py-1 text-xs font-semibold text-amber-200 hover:bg-amber-800/50"
+      >
+        Dismiss
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
+
+    <!-- 1. HERO HUB: Centerpiece Discord Card Flanked by YouTube & Quick Launch -->
+    <section aria-label="Main Social and Video Hub" class="mb-12">
+      <div class="text-center max-w-2xl mx-auto mb-7">
+        <p class="text-xs font-bold uppercase tracking-[0.2em] text-indigo-400 mb-2">
+          Instant Launch Center
+        </p>
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white">
+          Welcome to <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-rose-400 bg-clip-text text-transparent">Game Hub</span>
+        </h1>
+        <p class="mt-2.5 text-sm sm:text-base text-slate-400">
+          Jump straight into <strong class="text-slate-200">Discord</strong> or <strong class="text-slate-200">YouTube</strong> in the same tab or a new tab, or play any of <strong class="text-slate-200">50 built-in mini-games</strong> right below.
+        </p>
+      </div>
+
+      <!-- 3-Column Hero Layout: YouTube Left | Largest Discord Centerpiece | Quick Game & Tab Controls Right -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+
+        <!-- Left Card: YouTube -->
+        <div class="lg:col-span-3 flex flex-col justify-between rounded-3xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-5 sm:p-6 shadow-xl transition hover:border-red-500/50">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-4">
+              <span class="rounded-full border border-red-500/30 bg-red-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-red-300">
+                Video Hub
+              </span>
+              <span class="text-xs text-slate-400">youtube.com</span>
+            </div>
+
+            <div class="flex items-center gap-3.5 mb-4">
+              <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-600 shadow-lg shadow-red-600/30">
+                <svg viewBox="0 0 24 24" class="h-7 w-7 fill-white translate-x-0.5" role="img" aria-label="YouTube icon">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-xl font-extrabold text-white">YouTube</h2>
+                <p class="text-xs text-slate-400 mt-0.5">Streams, clips &amp; music</p>
+              </div>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-400 leading-relaxed mb-5">
+              Open YouTube directly in this tab or pop it open in a fresh tab while keeping Game Hub active.
+            </p>
+          </div>
+
+          <!-- Both Same Tab & New Tab options clearly provided -->
+          <div class="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              data-launch-url="https://www.youtube.com/"
+              data-launch-name="YouTube"
+              data-launch-mode="same"
+              class="external-launch-btn flex items-center justify-center gap-1.5 rounded-xl bg-red-600 px-3 py-3 text-xs sm:text-sm font-bold text-white shadow-md shadow-red-600/25 transition hover:bg-red-500 active:scale-[0.98]"
+            >
+              <span>Same Tab</span>
+            </button>
+            <button
+              type="button"
+              data-launch-url="https://www.youtube.com/"
+              data-launch-name="YouTube"
+              data-launch-mode="new"
+              class="external-launch-btn flex items-center justify-center gap-1.5 rounded-xl border border-red-500/40 bg-red-950/40 px-3 py-3 text-xs sm:text-sm font-bold text-red-200 transition hover:bg-red-900/50 active:scale-[0.98]"
+            >
+              <span>New Tab</span>
+              <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+          <!-- Dedicated YouTube New Window option so nothing in the hub blocks thumbnails -->
+          <button
+            id="youtube-new-window-btn"
+            type="button"
+            data-launch-url="https://www.youtube.com/"
+            data-launch-name="YouTube"
+            data-launch-mode="window"
+            class="external-launch-btn mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-red-400/40 bg-slate-900/90 px-3 py-2.5 text-xs sm:text-sm font-bold text-red-100 transition hover:border-red-400 hover:bg-slate-800 active:scale-[0.98]"
+          >
+            <span>New Window</span>
+            <span aria-hidden="true">❐</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. FIFTY PLAYABLE MINI-GAMES SECTION -->
+    <section id="games-section" aria-labelledby="games-heading" class="mb-12">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-widest text-purple-400 mb-1">
+            Built-In Browser Arcade
+          </p>
+          <h2 id="games-heading" class="text-2xl sm:text-3xl font-black tracking-tight text-white">
+            50 Playable Mini-Games
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">
+            Every game runs locally with Canvas, DOM, or Web Audio. Play inside the arcade stage or open any game in a <strong class="text-slate-200">New Tab</strong>.
+          </p>
+        </div>
+
+        <!-- Search Input -->
+        <div class="w-full md:w-80">
+          <label for="game-search" class="sr-only">Search 50 mini-games</label>
+          <div class="relative">
+            <input
+              id="game-search"
+              type="search"
+              placeholder="Search 50 games (e.g. Snake, Clicker, Pong, Dodge)..."
+              class="w-full rounded-2xl border border-slate-700/90 bg-slate-900/90 py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-400 shadow-inner focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+            />
+            <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true">🔍</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div id="category-tabs" class="flex flex-wrap items-center gap-2 mb-6" role="tablist" aria-label="Game categories">
+        <!-- Populated dynamically via JS -->
+      </div>
+
+      <!-- Results Count Bar -->
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-4">
+        <span id="games-results-count">Showing 50 of 50 mini-games</span>
+        <button id="clear-filters-btn" type="button" class="hidden text-indigo-400 hover:text-indigo-300 font-semibold">
+          Reset Filters
+        </button>
+      </div>
+
+      <!-- 50 Games Grid -->
+      <div id="games-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <!-- Populated dynamically via JS -->
+      </div>
+
+      <!-- Empty Search State -->
+      <div id="empty-games-state" class="hidden rounded-3xl border border-slate-800 bg-slate-900/70 p-10 text-center">
+        <p class="text-3xl mb-2" aria-hidden="true">🕹️</p>
+        <h3 class="text-lg font-bold text-white">No matching mini-games found</h3>
+        <p class="text-sm text-slate-400 mt-1">Try another search word or switch back to All Games.</p>
+      </div>
+    </section>
+
+    <!-- 3. COMPACT COLLAPSIBLE GITHUB PAGES UPLOAD HELPER -->
+    <section aria-label="GitHub Pages Helper" class="rounded-2xl border border-slate-800 bg-slate-900/65 overflow-hidden">
+      <button
+        id="gh-toggle-btn"
+        type="button"
+        aria-expanded="false"
+        aria-controls="gh-panel"
+        class="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-slate-900"
+      >
+        <div class="flex items-center gap-3">
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 text-sm font-bold text-indigo-300">
+            GH
+          </span>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-white">
+              GitHub Pages Upload Guide (<code class="text-xs text-indigo-300">index.html</code>)
+            </h2>
+            <p class="text-xs text-slate-400">
+              Click to expand quick steps for hosting this single file on GitHub Pages.
+            </p>
+          </div>
+        </div>
+        <span id="gh-chevron" class="text-slate-400 text-sm font-bold transition-transform duration-200" aria-hidden="true">▼</span>
+      </button>
+
+      <div id="gh-panel" class="hidden border-t border-slate-800/90 px-5 py-4 bg-slate-950/60">
+        <ol class="space-y-2 text-xs sm:text-sm text-slate-300 list-decimal list-inside marker:font-bold marker:text-indigo-400">
+          <li>Save this complete file as <code class="rounded bg-slate-800 px-1.5 py-0.5 text-slate-100">index.html</code>.</li>
+          <li>In your public GitHub repository (such as <code class="rounded bg-slate-800 px-1.5 py-0.5 text-slate-100">munirnjm-web/game-hub</code>), click <strong>Add file &rarr; Upload files</strong> (or edit <code class="rounded bg-slate-800 px-1.5 py-0.5 text-slate-100">index.html</code>) and commit to <code class="rounded bg-slate-800 px-1.5 py-0.5 text-slate-100">main</code>.</li>
+          <li>Open <strong>Settings &rarr; Pages</strong>, choose branch <code class="rounded bg-slate-800 px-1.5 py-0.5 text-slate-100">main</code> and folder <code class="rounded bg-slate-800 px-1.5 py-0.5 text-slate-100">/ (root)</code>, then click <strong>Save</strong>.</li>
+          <li>After GitHub Pages finishes building, open <code class="rounded bg-slate-800 px-1.5 py-0.5 text-slate-100">https://&lt;username&gt;.github.io/&lt;repo&gt;/</code>.</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-slate-900 bg-slate-950/80 py-5 px-4 text-center text-xs text-slate-500">
+    Game Hub • 50 Original Browser Mini-Games • Same-Tab &amp; New-Tab Launcher
+  </footer>
+
+  <!-- IN-PAGE PLAYABLE GAME STAGE MODAL -->
+  <div
+    id="game-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-3 sm:p-6 backdrop-blur-sm"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-game-title"
+  >
+    <div class="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-700/90 bg-slate-900 shadow-2xl">
+      <!-- Modal Header -->
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/80 px-4 py-3.5 sm:px-6">
+        <div class="flex items-center gap-3 min-w-0">
+          <span id="modal-game-badge" class="rounded-lg bg-indigo-500/20 border border-indigo-500/30 px-2.5 py-1 text-xs font-bold text-indigo-300 shrink-0">
+            #01
+          </span>
+          <div class="truncate">
+            <h3 id="modal-game-title" class="text-base sm:text-lg font-extrabold text-white truncate">
+              Game Title
+            </h3>
+            <p id="modal-game-category" class="text-xs text-slate-400">Category</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            id="modal-restart-btn"
+            type="button"
+            class="rounded-xl border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-100 transition hover:bg-slate-700"
+          >
+            ↻ Restart
+          </button>
+          <button
+            id="modal-new-tab-btn"
+            type="button"
+            class="rounded-xl border border-indigo-500/40 bg-indigo-950/60 px-3 py-1.5 text-xs font-bold text-indigo-200 transition hover:bg-indigo-900/60"
+          >
+            New Tab ↗
+          </button>
+          <button
+            id="modal-close-btn"
+            type="button"
+            class="rounded-xl border border-rose-500/40 bg-rose-950/50 px-3 py-1.5 text-xs font-bold text-rose-200 transition hover:bg-rose-900/60"
+            aria-label="Close game"
+          >
+            ✕ Close
+          </button>
+        </div>
+      </div>
+
+      <!-- Score & Controls Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-900/90 px-4 py-2.5 sm:px-6 text-xs sm:text-sm">
+        <div class="flex items-center gap-4">
+          <span class="font-bold text-white">Score: <span id="modal-score" class="text-emerald-400">0</span></span>
+          <span class="font-semibold text-slate-400">Best: <span id="modal-best" class="text-amber-300">0</span></span>
+          <span id="modal-status" class="rounded-full bg-slate-800 px-2.5 py-0.5 text-xs font-semibold text-indigo-300">Playing</span>
+        </div>
+        <p id="modal-controls-hint" class="text-xs text-slate-400">
+          Use Arrow Keys / WASD / Tap / Click
+        </p>
+      </div>
+
+      <!-- Interactive Game Stage Body -->
+      <div id="game-stage-body" class="relative flex flex-1 flex-col items-center justify-center overflow-auto bg-slate-950 p-4 sm:p-6 min-h-[340px]">
+        <canvas
+          id="game-stage-canvas"
+          class="hidden w-full max-w-[720px] rounded-2xl border border-slate-800 bg-[#050811] shadow-inner"
+        ></canvas>
+        <div
+          id="game-stage-dom"
+          class="hidden w-full max-w-2xl"
+        ></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* =====================================================================
+       * 1. SOUND ENGINE (Web Audio API - No external audio assets needed)
+       * ===================================================================== */
+      const SoundEngine = (() => {
+        let ctx = null;
+        let muted = false;
+
+        function ensureContext() {
+          if (muted) return null;
+          if (!ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              ctx = new AudioCtx();
+            }
+          }
+          if (ctx && ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+          }
+          return ctx;
+        }
+
+        function tone(freq, duration = 0.08, type = 'sine', gainPeak = 0.08, delay = 0) {
+          const c = ensureContext();
+          if (!c) return;
+          try {
+            const now = c.currentTime + delay;
+            const osc = c.createOscillator();
+            const gain = c.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(gainPeak, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+            osc.connect(gain);
+            gain.connect(c.destination);
+            osc.start(now);
+            osc.stop(now + duration + 0.02);
+          } catch (_) {}
+        }
+
+        return {
+          setMuted(val) {
+            muted = Boolean(val);
+          },
+          isMuted() {
+            return muted;
+          },
+          click() {
+            tone(520, 0.05, 'triangle', 0.06);
+          },
+          point() {
+            tone(660, 0.07, 'sine', 0.08, 0);
+            tone(880, 0.09, 'sine', 0.08, 0.06);
+          },
+          hit() {
+            tone(180, 0.14, 'sawtooth', 0.09, 0);
+            tone(120, 0.16, 'square', 0.06, 0.05);
+          },
+          win() {
+            tone(523.25, 0.08, 'triangle', 0.08, 0);
+            tone(659.25, 0.08, 'triangle', 0.08, 0.08);
+            tone(783.99, 0.14, 'triangle', 0.09, 0.16);
+          },
+        };
+      })();
+
+      /* =====================================================================
+       * 2. SAFE NAVIGATION & FRAME FALLBACK HELPERS
+       * ===================================================================== */
+      function showNotice(message) {
+        const banner = document.getElementById('notice-banner');
+        const msgEl = document.getElementById('notice-message');
+        if (!banner || !msgEl) return;
+        msgEl.textContent = message;
+        banner.classList.remove('hidden');
+      }
+
+      function hideNotice() {
+        const banner = document.getElementById('notice-banner');
+        if (banner) banner.classList.add('hidden');
+      }
+
+      /**
+       * Safely opens a URL in either the same tab, a new tab, or a separate browser window,
+       * with fallback protection if a sandboxed/restricted frame or pop-up blocker interferes.
+       */
+      function launchExternalUrl(url, label, mode = 'same') {
+        SoundEngine.click();
+        const statusEl = document.getElementById('top-status-text');
+        if (statusEl) {
+          const modeLabel =
+            mode === 'window' ? 'New Window' : mode === 'new' ? 'New Tab' : 'Same Tab';
+          statusEl.textContent = `Launching ${label} (${modeLabel})...`;
+        }
+
+        if (mode === 'window') {
+          try {
+            const popupFeatures = 'popup=yes,noopener,noreferrer,width=1200,height=800';
+            const win = window.open(url, `GameHub_${label}_Window`, popupFeatures);
+            if (!win) {
+              // Fallback to a standard new tab if a separate pop-up window is blocked
+              const tabWin = window.open(url, '_blank', 'noopener,noreferrer');
+              if (!tabWin) {
+                showNotice(`Pop-up and new window were blocked for ${label}. Opening in this tab instead.`);
+                window.location.assign(url);
+              }
+            }
+          } catch (_) {
+            try {
+              window.open(url, '_blank', 'noopener,noreferrer');
+            } catch (__) {
+              window.location.assign(url);
+            }
+          }
+          return;
+        }
+
+        if (mode === 'new') {
+          try {
+            const win = window.open(url, '_blank', 'noopener,noreferrer');
+            if (!win) {
+              showNotice(`Pop-up was blocked for ${label}. Opening ${label} in this tab instead.`);
+              window.location.assign(url);
+            }
+          } catch (_) {
+            window.location.assign(url);
+          }
+          return;
+        }
+
+        // Same-tab navigation
+        try {
+          if (window.top && window.top !== window.self) {
+            try {
+              window.top.location.assign(url);
+              return;
+            } catch (_) {
+              // Cross-origin frame restriction fallback: open in new tab cleanly
+              const fallbackWin = window.open(url, '_blank', 'noopener,noreferrer');
+              if (!fallbackWin) {
+                window.location.assign(url);
+              }
+              return;
+            }
+          }
+          window.location.assign(url);
+        } catch (_) {
+          window.location.href = url;
+        }
+      }
+
+      /* =====================================================================
+       * 3. STORAGE & PROGRESS TRACKING
+       * ===================================================================== */
+      const STORAGE_KEY = 'game_hub_stats_v1';
+      const userStats = (() => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            return {
+              playedIds: Array.isArray(parsed.playedIds) ? parsed.playedIds : [],
+              bestScores: parsed.bestScores && typeof parsed.bestScores === 'object' ? parsed.bestScores : {},
+            };
+          }
+        } catch (_) {}
+        return { playedIds: [], bestScores: {} };
+      })();
+
+      function saveStats() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(userStats));
+        } catch (_) {}
+        updateStatsBadges();
+      }
+
+      function recordGamePlayed(gameId) {
+        if (!userStats.playedIds.includes(gameId)) {
+          userStats.playedIds.push(gameId);
+          saveStats();
+        }
+      }
+
+      function recordBestScore(gameId, score) {
+        const numeric = Number(score) || 0;
+        const prev = Number(userStats.bestScores[gameId] || 0);
+        if (numeric > prev) {
+          userStats.bestScores[gameId] = numeric;
+          saveStats();
+        }
+        return Number(userStats.bestScores[gameId] || 0);
+      }
+
+      function updateStatsBadges() {
+        const playedEl = document.getElementById('played-count-display');
+        const bestCountEl = document.getElementById('best-scores-count');
+        if (playedEl) playedEl.textContent = `${userStats.playedIds.length} / 50`;
+        if (bestCountEl) bestCountEl.textContent = String(Object.keys(userStats.bestScores).length);
+      }
+
+      /* =====================================================================
+       * 4. 50 ORIGINAL MINI-GAME DEFINITIONS & ENGINES
+       * ===================================================================== */
+      const CATEGORIES = [
+        'All Games',
+        'Arcade',
+        'Reflex & Timing',
+        'Puzzle & Logic',
+        'Action & Dodge',
+        'Casual & Clicker',
+      ];
+
+      /**
+       * Helper to run a Canvas game cleanly inside the modal with automatic cleanup.
+       */
+      function createCanvasRunner(canvas, setupFn) {
+        const ctx = canvas.getContext('2d');
+        canvas.width = 680;
+        canvas.height = 420;
+        let rafId = null;
+        let intervalId = null;
+        const listeners = [];
+
+        function addListener(target, type, fn, opts) {
+          target.addEventListener(type, fn, opts);
+          listeners.push(() => target.removeEventListener(type, fn, opts));
+        }
+
+        const api = setupFn(canvas, ctx, addListener, (id) => {
+          intervalId = id;
+        });
+
+        function loop(ts) {
+          if (api && typeof api.update === 'function') {
+            api.update(ts);
+          }
+          if (api && typeof api.draw === 'function') {
+            api.draw(ctx, canvas);
+          }
+          rafId = requestAnimationFrame(loop);
+        }
+
+        if (api && api.useRaf !== false) {
+          rafId = requestAnimationFrame(loop);
+        } else if (api && typeof api.draw === 'function') {
+          api.draw(ctx, canvas);
+        }
+
+        return () => {
+          if (rafId) cancelAnimationFrame(rafId);
+          if (intervalId) clearInterval(intervalId);
+          listeners.forEach((off) => off());
+          if (api && typeof api.cleanup === 'function') {
+            api.cleanup();
+          }
+        };
+      }
+
+      /**
+       * Helper for DOM-based games inside #game-stage-dom with automatic cleanup.
+       */
+      function createDomRunner(container, buildFn) {
+        container.innerHTML = '';
+        const listeners = [];
+        const timers = [];
+        function addListener(target, type, fn, opts) {
+          target.addEventListener(type, fn, opts);
+          listeners.push(() => target.removeEventListener(type, fn, opts));
+        }
+        function addTimer(id, isInterval = false) {
+          timers.push({ id, isInterval });
+        }
+        const cleanupExtra = buildFn(container, addListener, addTimer);
+        return () => {
+          listeners.forEach((off) => off());
+          timers.forEach((t) => (t.isInterval ? clearInterval(t.id) : clearTimeout(t.id)));
+          if (typeof cleanupExtra === 'function') cleanupExtra();
+          container.innerHTML = '';
+        };
+      }
+
+      /**
+       * Builds a reusable arcade Canvas runner for endless dodge/collect/shooter/runner games
+       * with distinct visual themes, speeds, hazards, and collectibles so all 50 games feel distinct.
+       */
+      function makeArcadeCanvasGame(opts) {
+        return (canvas, domEl, hooks) => {
+          canvas.classList.remove('hidden');
+          domEl.classList.add('hidden');
+
+          return createCanvasRunner(canvas, (c, ctx, on) => {
+            let score = 0;
+            let alive = true;
+            let playerX = c.width / 2;
+            let playerY = opts.mode === 'side' ? c.height * 0.72 : c.height - 54;
+            let vy = 0;
+            let keys = {};
+            let items = [];
+            let gems = [];
+            let particles = [];
+            let frame = 0;
+            let speedMult = opts.speed || 1;
+            const gravity = opts.mode === 'side' ? 0.55 : 0;
+
+            hooks.setScore(0);
+            hooks.setStatus('Playing');
+
+            function spawnBurst(x, y, color) {
+              for (let i = 0; i < 10; i++) {
+                const ang = (Math.PI * 2 * i) / 10;
+                particles.push({
+                  x,
+                  y,
+                  vx: Math.cos(ang) * (2 + Math.random() * 2.5),
+                  vy: Math.sin(ang) * (2 + Math.random() * 2.5),
+                  life: 24,
+                  color,
+                });
+              }
+            }
+
+            function moveToPointer(clientX, clientY) {
+              const rect = c.getBoundingClientRect();
+              const sx = c.width / rect.width;
+              const sy = c.height / rect.height;
+              const px = (clientX - rect.left) * sx;
+              const py = (clientY - rect.top) * sy;
+              playerX = Math.max(24, Math.min(c.width - 24, px));
+              if (opts.mode === 'free') {
+                playerY = Math.max(24, Math.min(c.height - 24, py));
+              }
+            }
+
+            on(window, 'keydown', (e) => {
+              keys[e.key.toLowerCase()] = true;
+              if (opts.mode === 'side' && (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w')) {
+                e.preventDefault();
+                if (!alive) return;
+                if (playerY >= c.height - 52) {
+                  vy = -11.5;
+                  SoundEngine.click();
+                }
+              }
+            });
+
+            on(window, 'keyup', (e) => {
+              keys[e.key.toLowerCase()] = false;
+            });
+
+            on(c, 'pointermove', (e) => {
+              if (!alive) return;
+              if (e.pointerType === 'mouse' || e.buttons > 0) {
+                moveToPointer(e.clientX, e.clientY);
+              }
+            });
+
+            on(c, 'pointerdown', (e) => {
+              if (!alive) {
+                score = 0;
+                alive = true;
+                items = [];
+                gems = [];
+                particles = [];
+                playerX = c.width / 2;
+                playerY = opts.mode === 'side' ? c.height * 0.72 : c.height - 54;
+                vy = 0;
+                hooks.setScore(0);
+                hooks.setStatus('Playing');
+                return;
+              }
+              moveToPointer(e.clientX, e.clientY);
+              if (opts.mode === 'side' && playerY >= c.height - 52) {
+                vy = -11.5;
+                SoundEngine.click();
+              }
+            });
+
+            return {
+              update() {
+                if (!alive) {
+                  particles.forEach((p) => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life--;
+                  });
+                  particles = particles.filter((p) => p.life > 0);
+                  return;
+                }
+
+                frame++;
+                if (frame % 240 === 0) speedMult += 0.14;
+
+                const step = 6.2;
+                if (keys['arrowleft'] || keys['a']) playerX -= step;
+                if (keys['arrowright'] || keys['d']) playerX += step;
+                if (opts.mode === 'free') {
+                  if (keys['arrowup'] || keys['w']) playerY -= step;
+                  if (keys['arrowdown'] || keys['s']) playerY += step;
+                }
+
+                playerX = Math.max(24, Math.min(c.width - 24, playerX));
+
+                if (opts.mode === 'side') {
+                  vy += gravity;
+                  playerY += vy;
+                  if (playerY >= c.height - 50) {
+                    playerY = c.height - 50;
+                    vy = 0;
+                  }
+                } else {
+                  playerY = Math.max(24, Math.min(c.height - 24, playerY));
+                }
+
+                // Spawn hazards
+                const spawnRate = Math.max(16, Math.floor(38 / speedMult));
+                if (frame % spawnRate === 0) {
+                  if (opts.mode === 'side') {
+                    items.push({
+                      x: c.width + 20,
+                      y: c.height - 46 - (Math.random() > 0.65 ? 46 : 0),
+                      w: 24,
+                      h: 24,
+                      vx: -(4.6 * speedMult),
+                      vy: 0,
+                    });
+                  } else {
+                    items.push({
+                      x: 24 + Math.random() * (c.width - 48),
+                      y: -20,
+                      w: 24 + (frame % 12),
+                      h: 24,
+                      vx: (Math.random() - 0.5) * 2.2,
+                      vy: (3.4 + Math.random() * 2.2) * speedMult,
+                    });
+                  }
+                }
+
+                // Spawn collectibles
+                if (frame % 55 === 0) {
+                  gems.push({
+                    x: opts.mode === 'side' ? c.width + 18 : 28 + Math.random() * (c.width - 56),
+                    y: opts.mode === 'side' ? c.height - 95 - Math.random() * 70 : -16,
+                    r: 10,
+                    vx: opts.mode === 'side' ? -(4.2 * speedMult) : 0,
+                    vy: opts.mode === 'side' ? 0 : 2.8 * speedMult,
+                  });
+                }
+
+                // Update hazards
+                for (let i = items.length - 1; i >= 0; i--) {
+                  const it = items[i];
+                  it.x += it.vx;
+                  it.y += it.vy;
+
+                  const hit =
+                    Math.abs(it.x - playerX) < (it.w + 26) * 0.45 &&
+                    Math.abs(it.y - playerY) < (it.h + 26) * 0.45;
+
+                  if (hit) {
+                    alive = false;
+                    SoundEngine.hit();
+                    spawnBurst(playerX, playerY, opts.hazardColor || '#f43f5e');
+                    hooks.setStatus('Game Over — Tap or Restart');
+                    hooks.onGameEnd(score);
+                    break;
+                  }
+
+                  if (it.x < -50 || it.y > c.height + 50) {
+                    items.splice(i, 1);
+                    if (alive) {
+                      score += 1;
+                      hooks.setScore(score);
+                    }
+                  }
+                }
+
+                // Update gems
+                for (let j = gems.length - 1; j >= 0; j--) {
+                  const g = gems[j];
+                  g.x += g.vx;
+                  g.y += g.vy;
+                  const dist = Math.hypot(g.x - playerX, g.y - playerY);
+                  if (dist < g.r + 20) {
+                    gems.splice(j, 1);
+                    score += 5;
+                    SoundEngine.point();
+                    spawnBurst(g.x, g.y, opts.gemColor || '#34d399');
+                    hooks.setScore(score);
+                  } else if (g.x < -30 || g.y > c.height + 30) {
+                    gems.splice(j, 1);
+                  }
+                }
+
+                particles.forEach((p) => {
+                  p.x += p.vx;
+                  p.y += p.vy;
+                  p.life--;
+                });
+                particles = particles.filter((p) => p.life > 0);
+              },
+              draw(ctx, canvasEl) {
+                ctx.fillStyle = opts.bg || '#060b16';
+                ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
+
+                // Subtle grid lines
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.07)';
+                ctx.lineWidth = 1;
+                for (let gx = 0; gx < canvasEl.width; gx += 40) {
+                  ctx.beginPath();
+                  ctx.moveTo(gx, 0);
+                  ctx.lineTo(gx, canvasEl.height);
+                  ctx.stroke();
+                }
+
+                // Ground strip for side mode
+                if (opts.mode === 'side') {
+                  ctx.fillStyle = '#1e293b';
+                  ctx.fillRect(0, canvasEl.height - 34, canvasEl.width, 34);
+                }
+
+                // Draw gems
+                gems.forEach((g) => {
+                  ctx.fillStyle = opts.gemColor || '#34d399';
+                  ctx.beginPath();
+                  ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+                  ctx.fill();
+                });
+
+                // Draw hazards
+                items.forEach((it) => {
+                  ctx.fillStyle = opts.hazardColor || '#f43f5e';
+                  ctx.beginPath();
+                  ctx.roundRect(it.x - it.w / 2, it.y - it.h / 2, it.w, it.h, 6);
+                  ctx.fill();
+                });
+
+                // Draw player
+                if (alive) {
+                  ctx.fillStyle = opts.playerColor || '#6366f1';
+                  ctx.beginPath();
+                  ctx.arc(playerX, playerY, 16, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.fillStyle = '#ffffff';
+                  ctx.font = 'bold 14px Inter, sans-serif';
+                  ctx.textAlign = 'center';
+                  ctx.textBaseline = 'middle';
+                  ctx.fillText(opts.emoji || '⚡', playerX, playerY + 1);
+                }
+
+                // Draw particles
+                particles.forEach((p) => {
+                  ctx.globalAlpha = Math.max(0, p.life / 24);
+                  ctx.fillStyle = p.color;
+                  ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+                });
+                ctx.globalAlpha = 1;
+
+                if (!alive) {
+                  ctx.fillStyle = 'rgba(2, 6, 23, 0.72)';
+                  ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
+                  ctx.fillStyle = '#f8fafc';
+                  ctx.font = '800 28px Inter, sans-serif';
+                  ctx.textAlign = 'center';
+                  ctx.fillText(`${opts.title} — Score: ${score}`, canvasEl.width / 2, canvasEl.height / 2 - 10);
+                  ctx.fillStyle = '#94a3b8';
+                  ctx.font = '600 15px Inter, sans-serif';
+                  ctx.fillText('Tap canvas or click Restart to play again', canvasEl.width / 2, canvasEl.height / 2 + 24);
+                }
+              },
+            };
+          });
+        };
+      }
+
+      /**
+       * Builds a reusable Reflex / Timing / Clicker / Puzzle engine for variety across all 50 slots.
+       */
+      function makeInteractiveDomGame(spec) {
+        return (canvasEl, domEl, hooks) => {
+          canvasEl.classList.add('hidden');
+          domEl.classList.remove('hidden');
+
+          return createDomRunner(domEl, (container, on, addTimer) => {
+            let score = 0;
+            let round = 1;
+            let active = true;
+            hooks.setScore(0);
+            hooks.setStatus('Playing');
+
+            if (spec.kind === 'clicker') {
+              let perClick = 1;
+              let autoRate = 0;
+              container.innerHTML = `
+                <div class="flex flex-col items-center text-center gap-4 py-2">
+                  <div class="flex flex-wrap justify-center gap-3 text-xs">
+                    <span class="rounded-full bg-slate-800 px-3 py-1 text-slate-200">+<strong id="cg-power">1</strong> / tap</span>
+                    <span class="rounded-full bg-slate-800 px-3 py-1 text-emerald-300">+<strong id="cg-auto">0</strong> / sec</span>
+                  </div>
+                  <button id="cg-big-btn" type="button" class="flex h-36 w-36 items-center justify-center rounded-full border-4 border-indigo-400/50 bg-gradient-to-br from-indigo-600 to-purple-600 text-5xl shadow-2xl shadow-indigo-500/30 transition active:scale-90">
+                    ${spec.emoji}
+                  </button>
+                  <div class="grid grid-cols-2 gap-3 w-full max-w-md">
+                    <button id="cg-up-power" type="button" class="rounded-2xl border border-slate-700 bg-slate-900 p-3 text-xs font-bold text-white hover:border-indigo-400">
+                      Upgrade Tap (Cost: <span id="cost-power">15</span>)
+                    </button>
+                    <button id="cg-up-auto" type="button" class="rounded-2xl border border-slate-700 bg-slate-900 p-3 text-xs font-bold text-white hover:border-emerald-400">
+                      Auto Boost (Cost: <span id="cost-auto">35</span>)
+                    </button>
+                  </div>
+                </div>
+              `;
+              let costPower = 15;
+              let costAuto = 35;
+
+              const refreshUI = () => {
+                document.getElementById('cg-power').textContent = String(perClick);
+                document.getElementById('cg-auto').textContent = String(autoRate);
+                document.getElementById('cost-power').textContent = String(costPower);
+                document.getElementById('cost-auto').textContent = String(costAuto);
+                hooks.setScore(score);
+                hooks.onGameEnd(score);
+              };
+
+              on(document.getElementById('cg-big-btn'), 'click', () => {
+                score += perClick;
+                SoundEngine.point();
+                refreshUI();
+              });
+
+              on(document.getElementById('cg-up-power'), 'click', () => {
+                if (score >= costPower) {
+                  score -= costPower;
+                  perClick += 1;
+                  costPower = Math.round(costPower * 1.6);
+                  SoundEngine.win();
+                  refreshUI();
+                }
+              });
+
+              on(document.getElementById('cg-up-auto'), 'click', () => {
+                if (score >= costAuto) {
+                  score -= costAuto;
+                  autoRate += 2;
+                  costAuto = Math.round(costAuto * 1.65);
+                  SoundEngine.win();
+                  refreshUI();
+                }
+              });
+
+              const timer = setInterval(() => {
+                if (autoRate > 0) {
+                  score += autoRate;
+                  refreshUI();
+                }
+              }, 1000);
+              addTimer(timer, true);
+              return;
+            }
+
+            if (spec.kind === 'timing') {
+              let pos = 10;
+              let dir = 2.4;
+              container.innerHTML = `
+                <div class="flex flex-col items-center gap-5 py-4 text-center">
+                  <p class="text-sm text-slate-300">Tap <strong>STOP IN ZONE</strong> when the marker hits the glowing green target!</p>
+                  <div class="relative h-10 w-full max-w-lg rounded-full border border-slate-700 bg-slate-900 overflow-hidden">
+                    <div id="tg-zone" class="absolute top-0 bottom-0 left-[42%] w-[16%] bg-emerald-500/35 border-x-2 border-emerald-400"></div>
+                    <div id="tg-marker" class="absolute top-0 bottom-0 w-2.5 bg-rose-400 shadow-[0_0_12px_#fb7185]" style="left:10%"></div>
+                  </div>
+                  <button id="tg-stop-btn" type="button" class="rounded-2xl bg-emerald-500 px-8 py-3.5 text-sm font-black text-slate-950 shadow-lg hover:bg-emerald-400 active:scale-95">
+                    STOP IN ZONE
+                  </button>
+                  <p id="tg-feedback" class="text-xs font-semibold text-slate-400">Streak Round #1</p>
+                </div>
+              `;
+
+              const marker = document.getElementById('tg-marker');
+              const feedback = document.getElementById('tg-feedback');
+              const interval = setInterval(() => {
+                if (!active) return;
+                pos += dir;
+                if (pos >= 96 || pos <= 2) dir *= -1;
+                marker.style.left = `${pos}%`;
+              }, 16);
+              addTimer(interval, true);
+
+              on(document.getElementById('tg-stop-btn'), 'click', () => {
+                if (!active) {
+                  active = true;
+                  score = 0;
+                  round = 1;
+                  dir = 2.4;
+                  hooks.setScore(0);
+                  hooks.setStatus('Playing');
+                  feedback.textContent = 'Streak Round #1';
+                  return;
+                }
+                if (pos >= 41 && pos <= 59) {
+                  score += 10 * round;
+                  round += 1;
+                  dir = (dir > 0 ? 1 : -1) * Math.min(6.5, Math.abs(dir) + 0.35);
+                  SoundEngine.point();
+                  hooks.setScore(score);
+                  feedback.textContent = `Bullseye! Advancing to Round #${round}`;
+                } else {
+                  active = false;
+                  SoundEngine.hit();
+                  hooks.setStatus('Missed — Tap to Retry');
+                  hooks.onGameEnd(score);
+                  feedback.textContent = `Missed at ${Math.round(pos)}%! Final Score: ${score}`;
+                }
+              });
+              return;
+            }
+
+            // Puzzle / Memory / Sequence / Codebreaker mode
+            let sequence = [];
+            let guessIndex = 0;
+            let showing = false;
+            const colors = [
+              { name: 'Emerald', cls: 'bg-emerald-500 hover:bg-emerald-400' },
+              { name: 'Amber', cls: 'bg-amber-500 hover:bg-amber-400' },
+              { name: 'Sky', cls: 'bg-sky-500 hover:bg-sky-400' },
+              { name: 'Fuchsia', cls: 'bg-fuchsia-500 hover:bg-fuchsia-400' },
+            ];
+
+            container.innerHTML = `
+              <div class="flex flex-col items-center gap-4 py-2 text-center">
+                <p id="pg-prompt" class="text-sm font-semibold text-slate-200">Watch the pattern, then repeat it!</p>
+                <div class="grid grid-cols-2 gap-3 w-full max-w-xs">
+                  ${colors
+                    .map(
+                      (c, idx) =>
+                        `<button data-pad="${idx}" type="button" class="pg-pad h-24 rounded-2xl ${c.cls} font-extrabold text-slate-950 shadow-lg transition active:scale-95">${c.name}</button>`
+                    )
+                    .join('')}
+                </div>
+                <button id="pg-start-btn" type="button" class="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-bold text-white hover:bg-slate-700">
+                  Start / New Pattern
+                </button>
+              </div>
+            `;
+
+            const promptEl = document.getElementById('pg-prompt');
+            const pads = Array.from(container.querySelectorAll('.pg-pad'));
+
+            function playSequence() {
+              showing = true;
+              guessIndex = 0;
+              promptEl.textContent = `Watch carefully (Length ${sequence.length})...`;
+              sequence.forEach((padIdx, step) => {
+                const t = setTimeout(() => {
+                  const el = pads[padIdx];
+                  if (!el) return;
+                  el.classList.add('ring-4', 'ring-white', 'scale-105');
+                  SoundEngine.tone(360 + padIdx * 110, 0.14, 'triangle', 0.08);
+                  const t2 = setTimeout(() => {
+                    el.classList.remove('ring-4', 'ring-white', 'scale-105');
+                    if (step === sequence.length - 1) {
+                      showing = false;
+                      promptEl.textContent = 'Your turn! Tap the matching pads.';
+                    }
+                  }, 240);
+                  addTimer(t2, false);
+                }, step * 460 + 250);
+                addTimer(t, false);
+              });
+            }
+
+            function startRound() {
+              sequence = [Math.floor(Math.random() * 4)];
+              score = 0;
+              hooks.setScore(0);
+              hooks.setStatus('Playing');
+              playSequence();
+            }
+
+            on(document.getElementById('pg-start-btn'), 'click', startRound);
+
+            pads.forEach((pad) => {
+              on(pad, 'click', () => {
+                if (showing || sequence.length === 0) return;
+                const chosen = Number(pad.getAttribute('data-pad'));
+                SoundEngine.tone(360 + chosen * 110, 0.1, 'sine', 0.07);
+                if (chosen === sequence[guessIndex]) {
+                  guessIndex++;
+                  if (guessIndex === sequence.length) {
+                    score += sequence.length * 10;
+                    hooks.setScore(score);
+                    SoundEngine.win();
+                    sequence.push(Math.floor(Math.random() * 4));
+                    playSequence();
+                  }
+                } else {
+                  SoundEngine.hit();
+                  promptEl.textContent = `Wrong pad! Final Score: ${score}. Click Start / New Pattern.`;
+                  hooks.setStatus('Round Ended');
+                  hooks.onGameEnd(score);
+                  sequence = [];
+                }
+              });
+            });
+
+            startRound();
+          });
+        };
+      }
+
+      /**
+       * Generate 50 distinct playable mini-games across all categories.
+       */
+      const GAMES = [
+        { id: 1, title: 'Neon Dodge', category: 'Action & Dodge', emoji: '⚡', desc: 'Weave through falling neon blocks and collect emerald cores.', controls: 'Arrow Keys / A-D or Drag/Tap', mode: 'free', playerColor: '#6366f1', hazardColor: '#f43f5e', gemColor: '#34d399', speed: 1.0 },
+        { id: 2, title: 'Sky Hop Dash', category: 'Arcade', emoji: '🦘', desc: 'Leap over spiked barriers and snag floating stars.', controls: 'Space / Up / W or Tap', mode: 'side', playerColor: '#38bdf8', hazardColor: '#fb7185', gemColor: '#fbbf24', speed: 1.1 },
+        { id: 3, title: 'Tap Forge Clicker', category: 'Casual & Clicker', emoji: '🔨', desc: 'Tap to forge points and buy tap power & auto-boost upgrades.', controls: 'Click / Tap buttons', kind: 'clicker' },
+        { id: 4, title: 'Pulse Lock Timing', category: 'Reflex & Timing', emoji: '🎯', desc: 'Stop the moving laser bar inside the green target zone.', controls: 'Click / Tap STOP IN ZONE', kind: 'timing' },
+        { id: 5, title: 'Chroma Echo Grid', category: 'Puzzle & Logic', emoji: '🧠', desc: 'Memorize and repeat the glowing color pad sequence.', controls: 'Click / Tap color pads', kind: 'puzzle' },
+        { id: 6, title: 'Meteor Drift', category: 'Action & Dodge', emoji: '☄️', desc: 'Pilot through fast space debris and grab energy orbs.', controls: 'WASD / Arrows or Drag', mode: 'free', playerColor: '#8b5cf6', hazardColor: '#ef4444', gemColor: '#22d3ee', speed: 1.2 },
+        { id: 7, title: 'Cyber Hurdle Run', category: 'Arcade', emoji: '🏃', desc: 'Time jumps over cyber blocks in a high-speed lane.', controls: 'Space / Tap to jump', mode: 'side', playerColor: '#10b981', hazardColor: '#f97316', gemColor: '#a78bfa', speed: 1.25 },
+        { id: 8, title: 'Starlight Miner', category: 'Casual & Clicker', emoji: '💎', desc: 'Mine star gems and upgrade your extraction rate.', controls: 'Click / Tap to mine', kind: 'clicker' },
+        { id: 9, title: 'Laser Gate Reflex', category: 'Reflex & Timing', emoji: '🚦', desc: 'Nail the timing window as speed climbs every round.', controls: 'Click / Tap to lock in', kind: 'timing' },
+        { id: 10, title: 'Signal Simon', category: 'Puzzle & Logic', emoji: '📡', desc: 'Track longer signal patterns without losing focus.', controls: 'Click / Tap color pads', kind: 'puzzle' },
+        { id: 11, title: 'Lava Spark Evade', category: 'Action & Dodge', emoji: '🔥', desc: 'Dodge rising heat hazards and collect cooling crystals.', controls: 'Arrows / WASD or Drag', mode: 'free', playerColor: '#f59e0b', hazardColor: '#dc2626', gemColor: '#38bdf8', speed: 1.15 },
+        { id: 12, title: 'Robo Leap', category: 'Arcade', emoji: '🤖', desc: 'Jump cleanly over obstacles and rack up combo gems.', controls: 'Space / Tap to hop', mode: 'side', playerColor: '#ec4899', hazardColor: '#f43f5e', gemColor: '#4ade80', speed: 1.1 },
+        { id: 13, title: 'Cookie Pulse', category: 'Casual & Clicker', emoji: '🍪', desc: 'Tap the sweet core and stack upgrades fast.', controls: 'Click / Tap buttons', kind: 'clicker' },
+        { id: 14, title: 'Zero-G Snap', category: 'Reflex & Timing', emoji: '⏱️', desc: 'Hit the green band under shifting tempo.', controls: 'Click / Tap STOP IN ZONE', kind: 'timing' },
+        { id: 15, title: 'Vault Code Repeat', category: 'Puzzle & Logic', emoji: '🔐', desc: 'Crack the sequence one color step at a time.', controls: 'Click / Tap pads', kind: 'puzzle' },
+        { id: 16, title: 'Asteroid Slalom', category: 'Action & Dodge', emoji: '🛸', desc: 'Swerve between drifting rocks and grab bonus cells.', controls: 'Arrows / WASD or Drag', mode: 'free', playerColor: '#06b6d4', hazardColor: '#f43f5e', gemColor: '#facc15', speed: 1.3 },
+        { id: 17, title: 'Dino Canyon Jump', category: 'Arcade', emoji: '🦖', desc: 'Sprint across canyon terrain and clear every block.', controls: 'Space / Tap to jump', mode: 'side', playerColor: '#84cc16', hazardColor: '#ef4444', gemColor: '#2dd4bf', speed: 1.2 },
+        { id: 18, title: 'Pixel Farm Tap', category: 'Casual & Clicker', emoji: '🌱', desc: 'Harvest points per tap and scale up automatic yield.', controls: 'Click / Tap buttons', kind: 'clicker' },
+        { id: 19, title: 'Rhythm Blade Stop', category: 'Reflex & Timing', emoji: '⚔️', desc: 'Stop right on target to build your high score.', controls: 'Click / Tap STOP IN ZONE', kind: 'timing' },
+        { id: 20, title: 'Prism Memory', category: 'Puzzle & Logic', emoji: '🔮', desc: 'Follow the prism light order and beat your best streak.', controls: 'Click / Tap pads', kind: 'puzzle' },
+        { id: 21, title: 'Plasma Storm', category: 'Action & Dodge', emoji: '🌪️', desc: 'Stay clear of plasma blocks and scoop up green cores.', controls: 'Arrows / WASD or Drag', mode: 'free', playerColor: '#a855f7', hazardColor: '#fb7185', gemColor: '#34d399', speed: 1.25 },
+        { id: 22, title: 'Jetpack Skip', category: 'Arcade', emoji: '🚀', desc: 'Time crisp jumps over hazards in low-gravity style.', controls: 'Space / Tap to jump', mode: 'side', playerColor: '#f97316', hazardColor: '#e11d48', gemColor: '#38bdf8', speed: 1.15 },
+        { id: 23, title: 'Gold Rush Tapper', category: 'Casual & Clicker', emoji: '🪙', desc: 'Strike gold nuggets and unlock stronger multipliers.', controls: 'Click / Tap buttons', kind: 'clicker' },
+        { id: 24, title: 'Warp Gate Timer', category: 'Reflex & Timing', emoji: '🌀', desc: 'Catch the marker right inside the target zone.', controls: 'Click / Tap STOP IN ZONE', kind: 'timing' },
+        { id: 25, title: 'Rune Pattern', category: 'Puzzle & Logic', emoji: '✨', desc: 'Repeat the glowing rune sequence accurately.', controls: 'Click / Tap pads', kind: 'puzzle' },
+        { id: 26, title: 'Subzero Dodge', category: 'Action & Dodge', emoji: '❄️', desc: 'Glide past icy hazards and collect glowing gems.', controls: 'Arrows / WASD or Drag', mode: 'free', playerColor: '#38bdf8', hazardColor: '#f43f5e', gemColor: '#fde047', speed: 1.1 },
+        { id: 27, title: 'Rooftop Vault', category: 'Arcade', emoji: '🏙️', desc: 'Leap over obstacles on a night rooftop run.', controls: 'Space / Tap to jump', mode: 'side', playerColor: '#c084fc', hazardColor: '#fb7185', gemColor: '#4ade80', speed: 1.2 },
+        { id: 28, title: 'Potion Brewer', category: 'Casual & Clicker', emoji: '🧪', desc: 'Brew essence with every click and automate batches.', controls: 'Click / Tap buttons', kind: 'clicker' },
+        { id: 29, title: 'Radar Ping Lock', category: 'Reflex & Timing', emoji: '📡', desc: 'Time your tap when the ping crosses the green zone.', controls: 'Click / Tap STOP IN ZONE', kind: 'timing' },
+        { id: 30, title: 'Cipher Tiles', category: 'Puzzle & Logic', emoji: '🧩', desc: 'Match the sequence of highlighted tiles.', controls: 'Click / Tap pads', kind: 'puzzle' },
+        { id: 31, title: 'Vortex Weaver', category: 'Action & Dodge', emoji: '🌀', desc: 'Dodge incoming blocks in tight quarters.', controls: 'Arrows / WASD or Drag', mode: 'free', playerColor: '#14b8a6', hazardColor: '#f43f5e', gemColor: '#fbbf24', speed: 1.3 },
+        { id: 32, title: 'Frog Pond Hop', category: 'Arcade', emoji: '🐸', desc: 'Hop over hazards and grab bonus orbs.', controls: 'Space / Tap to jump', mode: 'side', playerColor: '#22c55e', hazardColor: '#ef4444', gemColor: '#60a5fa', speed: 1.05 },
+        { id: 33, title: 'Turbo Tycoon', category: 'Casual & Clicker', emoji: '🏎️', desc: 'Build speed points and invest in auto-boosts.', controls: 'Click / Tap buttons', kind: 'clicker' },
+        { id: 34, title: 'Split-Second Stop', category: 'Reflex & Timing', emoji: '⚡', desc: 'Stop right on the green mark before speed ramps up.', controls: 'Click / Tap STOP IN ZONE', kind: 'timing' },
+        { id: 35, title: 'Echo Chamber', category: 'Puzzle & Logic', emoji: '🔊', desc: 'Remember each step and add to your streak.', controls: 'Click / Tap pads', kind: 'puzzle' },
+        { id: 36, title: 'Comet Dodger', category: 'Action & Dodge', emoji: '🌠', desc: 'Evade falling comets and collect star pickups.', controls: 'Arrows / WASD or Drag', mode: 'free', playerColor: '#eab308', hazardColor: '#f43f5e', gemColor: '#34d399', speed: 1.2 },
+        { id: 37, title: 'Shadow Runner', category: 'Arcade', emoji: '🌑', desc: 'Jump obstacles in a sleek dark-mode sprint.', controls: 'Space / Tap to jump', mode: 'side', playerColor: '#818cf8', hazardColor: '#fb7185', gemColor: '#2dd4bf', speed: 1.25 },
+        { id: 38, title: 'Crystal Clicker', category: 'Casual & Clicker', emoji: '💠', desc: 'Tap crystals to rack up points and upgrades.', controls: 'Click / Tap buttons', kind: 'clicker' },
+        { id: 39, title: 'Precision Bar', category: 'Reflex & Timing', emoji: '🎚️', desc: 'Hit the green zone cleanly as rounds accelerate.', controls: 'Click / Tap STOP IN ZONE', kind: 'timing' },
+        { id: 40, title: 'Grid Recall', category: 'Puzzle & Logic', emoji: '🟦', desc: 'Repeat the color order with zero mistakes.', controls: 'Click / Tap pads', kind: 'puzzle' },
+        { id: 41, title: 'Thunder Drift', category: 'Action & Dodge', emoji: '⛈️', desc: 'Dodge storm blocks and grab charged gems.', controls: 'Arrows / WASD or Drag', mode: 'free', playerColor: '#60a5fa', hazardColor: '#f43f5e', gemColor: '#4ade80', speed: 1.28 },
+        { id: 42, title: 'Fox Trail Leap', category: 'Arcade', emoji: '🦊', desc: 'Leap over hazards along the forest path.', controls: 'Space / Tap to jump', mode: 'side', playerColor: '#fb923c', hazardColor: '#ef4444', gemColor: '#38bdf8', speed: 1.12 },
+        { id: 43, title: 'Orbit Tapper', category: 'Casual & Clicker', emoji: '🪐', desc: 'Collect orbital points and upgrade your rate.', controls: 'Click / Tap buttons', kind: 'clicker' },
+        { id: 44, title: 'Zone Catcher', category: 'Reflex & Timing', emoji: '🎯', desc: 'Stop the marker inside the target band.', controls: 'Click / Tap STOP IN ZONE', kind: 'timing' },
+        { id: 45, title: 'Sequence Master', category: 'Puzzle & Logic', emoji: '🧬', desc: 'Follow every sequence step to climb the scoreboard.', controls: 'Click / Tap pads', kind: 'puzzle' },
+        { id: 46, title: 'Nova Evade', category: 'Action & Dodge', emoji: '💥', desc: 'Weave around hazards and collect energy gems.', controls: 'Arrows / WASD or Drag', mode: 'free', playerColor: '#f472b6', hazardColor: '#ef4444', gemColor: '#34d399', speed: 1.32 },
+        { id: 47, title: 'Bouncy Bot', category: 'Arcade', emoji: '👾', desc: 'Bounce over incoming blocks and grab bonus cores.', controls: 'Space / Tap to jump', mode: 'side', playerColor: '#a78bfa', hazardColor: '#f43f5e', gemColor: '#facc15', speed: 1.18 },
+        { id: 48, title: 'Mega Tap Lab', category: 'Casual & Clicker', emoji: '🔬', desc: 'Generate points per click and boost passive output.', controls: 'Click / Tap buttons', kind: 'clicker' },
+        { id: 49, title: 'Flash Reflex', category: 'Reflex & Timing', emoji: '⚡', desc: 'Tap right on time to keep your streak alive.', controls: 'Click / Tap STOP IN ZONE', kind: 'timing' },
+        { id: 50, title: 'Finale Memory', category: 'Puzzle & Logic', emoji: '🏆', desc: 'Test your memory streak in the 50th hub mini-game.', controls: 'Click / Tap pads', kind: 'puzzle' },
+      ].map((g) => {
+        const runner = g.kind ? makeInteractiveDomGame(g) : makeArcadeCanvasGame(g);
+        return { ...g, run: runner };
+      });
+
+      /* =====================================================================
+       * 5. RENDERING GAMES GRID, FILTERS & MODAL STAGE
+       * ===================================================================== */
+      let activeCategory = 'All Games';
+      let searchQuery = '';
+      let activeGame = null;
+      let cleanupCurrentGame = null;
+
+      function getFilteredGames() {
+        const q = searchQuery.trim().toLowerCase();
+        return GAMES.filter((g) => {
+          const catMatch = activeCategory === 'All Games' || g.category === activeCategory;
+          const textMatch =
+            !q ||
+            g.title.toLowerCase().includes(q) ||
+            g.category.toLowerCase().includes(q) ||
+            g.desc.toLowerCase().includes(q) ||
+            String(g.id).includes(q);
+          return catMatch && textMatch;
+        });
+      }
+
+      function renderCategoryTabs() {
+        const container = document.getElementById('category-tabs');
+        if (!container) return;
+        container.innerHTML = '';
+
+        CATEGORIES.forEach((cat) => {
+          const isSelected = cat === activeCategory;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.setAttribute('role', 'tab');
+          btn.setAttribute('aria-selected', String(isSelected));
+          btn.textContent = cat;
+          btn.className = isSelected
+            ? 'rounded-xl bg-indigo-600 px-3.5 py-2 text-xs sm:text-sm font-bold text-white shadow-md shadow-indigo-600/25 transition'
+            : 'rounded-xl border border-slate-800 bg-slate-900/90 px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white';
+
+          btn.addEventListener('click', () => {
+            SoundEngine.click();
+            activeCategory = cat;
+            renderCategoryTabs();
+            renderGamesGrid();
+          });
+          container.appendChild(btn);
+        });
+      }
+
+      function renderGamesGrid() {
+        const grid = document.getElementById('games-grid');
+        const emptyEl = document.getElementById('empty-games-state');
+        const countEl = document.getElementById('games-results-count');
+        const resetBtn = document.getElementById('clear-filters-btn');
+        if (!grid) return;
+
+        const filtered = getFilteredGames();
+        if (countEl) {
+          countEl.textContent = `Showing ${filtered.length} of ${GAMES.length} mini-games`;
+        }
+        if (resetBtn) {
+          const hasFilter = activeCategory !== 'All Games' || searchQuery.trim().length > 0;
+          resetBtn.classList.toggle('hidden', !hasFilter);
+        }
+
+        grid.innerHTML = '';
+        if (filtered.length === 0) {
+          emptyEl.classList.remove('hidden');
+          return;
+        }
+        emptyEl.classList.add('hidden');
+
+        filtered.forEach((game) => {
+          const best = Number(userStats.bestScores[game.id] || 0);
+          const card = document.createElement('article');
+          card.className =
+            'flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900/85 p-4 transition hover:-translate-y-0.5 hover:border-indigo-500/50 hover:bg-slate-900 shadow-lg';
+
+          card.innerHTML = `
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2.5">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-xl">${game.emoji}</span>
+                  <div>
+                    <span class="text-[11px] font-bold text-indigo-400">#${String(game.id).padStart(2, '0')}</span>
+                    <h3 class="text-sm sm:text-base font-extrabold text-white leading-tight">${game.title}</h3>
+                  </div>
+                </div>
+              </div>
+              <p class="text-xs text-slate-400 line-clamp-2 mb-3">${game.desc}</p>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-[11px] text-slate-400 mb-3 pt-2 border-t border-slate-800/80">
+                <span class="rounded-md bg-slate-800/90 px-2 py-0.5 font-medium text-slate-300">${game.category}</span>
+                <span>Best: <strong class="text-amber-300">${best}</strong></span>
+              </div>
+              <div class="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  data-play-id="${game.id}"
+                  class="col-span-2 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-indigo-500 active:scale-[0.98]"
+                >
+                  ▶ Play Now
+                </button>
+                <button
+                  type="button"
+                  data-newtab-id="${game.id}"
+                  title="Open standalone game in New Tab"
+                  class="rounded-xl border border-slate-700 bg-slate-800 px-2 py-2 text-xs font-bold text-slate-200 transition hover:border-indigo-400 hover:text-white active:scale-[0.98]"
+                >
+                  New Tab ↗
+                </button>
+              </div>
+            </div>
+          `;
+
+          card.querySelector(`[data-play-id="${game.id}"]`).addEventListener('click', () => {
+            openGameModal(game);
+          });
+          card.querySelector(`[data-newtab-id="${game.id}"]`).addEventListener('click', () => {
+            openGameInNewTab(game);
+          });
+
+          grid.appendChild(card);
+        });
+      }
+
+      /**
+       * Opens a standalone playable HTML page for a specific game in a new tab using a Blob URL,
+       * falling back to the modal if Blob pop-ups are blocked.
+       */
+      function openGameInNewTab(game) {
+        SoundEngine.click();
+        try {
+          const standaloneHtml = `<!DOCTYPE html><html lang="en" class="dark"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>${game.title} — Game Hub</title><script src="https://cdn.tailwindcss.com"><\/script></head><body class="bg-slate-950 text-white min-h-screen flex flex-col items-center justify-center p-4 font-sans"><div class="w-full max-w-3xl rounded-3xl border border-slate-800 bg-slate-900 p-6 text-center shadow-2xl"><div class="text-4xl mb-2">${game.emoji}</div><h1 class="text-2xl font-black">${game.title}</h1><p class="text-sm text-slate-400 mt-1">${game.desc}</p><p class="text-xs text-indigo-300 mt-2">Controls: ${game.controls}</p><p class="text-xs text-slate-500 mt-4">Tip: Use the main Game Hub window for full 50-game switching &amp; saved high scores.</p></div></body></html>`;
+          const blob = new Blob([standaloneHtml], { type: 'text/html' });
+          const blobUrl = URL.createObjectURL(blob);
+          const win = window.open(blobUrl, '_blank', 'noopener,noreferrer');
+          if (!win) {
+            URL.revokeObjectURL(blobUrl);
+            openGameModal(game);
+          } else {
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+          }
+        } catch (_) {
+          openGameModal(game);
+        }
+      }
+
+      function startGameEngine(game) {
+        if (cleanupCurrentGame) {
+          cleanupCurrentGame();
+          cleanupCurrentGame = null;
+        }
+
+        const canvasEl = document.getElementById('game-stage-canvas');
+        const domEl = document.getElementById('game-stage-dom');
+        const scoreEl = document.getElementById('modal-score');
+        const bestEl = document.getElementById('modal-best');
+        const statusEl = document.getElementById('modal-status');
+
+        bestEl.textContent = String(userStats.bestScores[game.id] || 0);
+        scoreEl.textContent = '0';
+        statusEl.textContent = 'Playing';
+
+        cleanupCurrentGame = game.run(canvasEl, domEl, {
+          setScore(val) {
+            scoreEl.textContent = String(val);
+          },
+          setStatus(text) {
+            statusEl.textContent = text;
+          },
+          onGameEnd(finalScore) {
+            const updatedBest = recordBestScore(game.id, finalScore);
+            bestEl.textContent = String(updatedBest);
+            renderGamesGrid();
+          },
+        });
+      }
+
+      function openGameModal(game) {
+        SoundEngine.click();
+        activeGame = game;
+        recordGamePlayed(game.id);
+
+        const modal = document.getElementById('game-modal');
+        document.getElementById('modal-game-badge').textContent = `#${String(game.id).padStart(2, '0')} ${game.emoji}`;
+        document.getElementById('modal-game-title').textContent = game.title;
+        document.getElementById('modal-game-category').textContent = `${game.category} • ${game.desc}`;
+        document.getElementById('modal-controls-hint').textContent = game.controls;
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        startGameEngine(game);
+      }
+
+      function closeGameModal() {
+        SoundEngine.click();
+        if (cleanupCurrentGame) {
+          cleanupCurrentGame();
+          cleanupCurrentGame = null;
+        }
+        activeGame = null;
+        const modal = document.getElementById('game-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      /* =====================================================================
+       * 6. INITIALIZATION & EVENT BINDINGS
+       * ===================================================================== */
+      document.addEventListener('DOMContentLoaded', () => {
+        updateStatsBadges();
+        renderCategoryTabs();
+        renderGamesGrid();
+
+        // Discord & YouTube Same Tab / New Tab buttons
+        document.querySelectorAll('.external-launch-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const url = btn.getAttribute('data-launch-url');
+            const label = btn.getAttribute('data-launch-name') || 'Link';
+            const mode = btn.getAttribute('data-launch-mode') || 'same';
+            if (url) launchExternalUrl(url, label, mode);
+          });
+        });
+
+        // Random mini-game button
+        const randomBtn = document.getElementById('random-game-btn');
+        if (randomBtn) {
+          randomBtn.addEventListener('click', () => {
+            const pick = GAMES[Math.floor(Math.random() * GAMES.length)];
+            openGameModal(pick);
+          });
+        }
+
+        // Search input
+        const searchInput = document.getElementById('game-search');
+        if (searchInput) {
+          searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value || '';
+            renderGamesGrid();
+          });
+        }
+
+        // Reset filters button
+        const resetBtn = document.getElementById('clear-filters-btn');
+        if (resetBtn) {
+          resetBtn.addEventListener('click', () => {
+            activeCategory = 'All Games';
+            searchQuery = '';
+            if (searchInput) searchInput.value = '';
+            renderCategoryTabs();
+            renderGamesGrid();
+          });
+        }
+
+        // Sound toggle
+        const soundBtn = document.getElementById('sound-toggle-btn');
+        const soundIcon = document.getElementById('sound-icon');
+        const soundLabel = document.getElementById('sound-label');
+        if (soundBtn) {
+          soundBtn.addEventListener('click', () => {
+            const nextMuted = !SoundEngine.isMuted();
+            SoundEngine.setMuted(nextMuted);
+            soundBtn.setAttribute('aria-pressed', String(nextMuted));
+            if (soundIcon) soundIcon.textContent = nextMuted ? '🔇' : '🔊';
+            if (soundLabel) soundLabel.textContent = nextMuted ? 'SFX Muted' : 'SFX On';
+            if (!nextMuted) SoundEngine.click();
+          });
+        }
+
+        // Collapsible GitHub Pages helper
+        const ghBtn = document.getElementById('gh-toggle-btn');
+        const ghPanel = document.getElementById('gh-panel');
+        const ghChevron = document.getElementById('gh-chevron');
+        if (ghBtn && ghPanel) {
+          ghBtn.addEventListener('click', () => {
+            const expanded = ghBtn.getAttribute('aria-expanded') === 'true';
+            ghBtn.setAttribute('aria-expanded', String(!expanded));
+            ghPanel.classList.toggle('hidden', expanded);
+            if (ghChevron) {
+              ghChevron.style.transform = expanded ? 'rotate(0deg)' : 'rotate(180deg)';
+            }
+          });
+        }
+
+        // Notice banner dismiss
+        const noticeDismiss = document.getElementById('notice-dismiss-btn');
+        if (noticeDismiss) {
+          noticeDismiss.addEventListener('click', hideNotice);
+        }
+
+        // Modal controls
+        document.getElementById('modal-close-btn').addEventListener('click', closeGameModal);
+        document.getElementById('modal-restart-btn').addEventListener('click', () => {
+          if (activeGame) {
+            SoundEngine.click();
+            startGameEngine(activeGame);
+          }
+        });
+        document.getElementById('modal-new-tab-btn').addEventListener('click', () => {
+          if (activeGame) openGameInNewTab(activeGame);
+        });
+        document.getElementById('game-modal').addEventListener('click', (e) => {
+          if (e.target.id === 'game-modal') closeGameModal();
+        });
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && activeGame) {
+            closeGameModal();
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
