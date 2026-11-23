@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discord</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Configure Tailwind CSS for dark mode and clean Inter typography
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap');
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #050811;
+      color: #f8fafc;
+    }
+
+    /* Subtle animated ambient glow orbs behind the centered Discord tile */
+    .ambient-glow {
+      position: fixed;
+      border-radius: 9999px;
+      filter: blur(115px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.42;
+      animation: driftGlow 12s ease-in-out infinite alternate;
+    }
+
+    .glow-primary {
+      width: 420px;
+      height: 420px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.55), rgba(79, 70, 229, 0));
+    }
+
+    .glow-accent {
+      width: 320px;
+      height: 320px;
+      top: 18%;
+      left: 22%;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0));
+      animation-delay: -4s;
+    }
+
+    .glow-secondary {
+      width: 320px;
+      height: 320px;
+      bottom: 16%;
+      right: 20%;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.25), rgba(126, 34, 206, 0));
+      animation-delay: -8s;
+    }
+
+    @keyframes driftGlow {
+      0% {
+        transform: translate(0, 0) scale(1);
+      }
+      100% {
+        transform: translate(18px, -22px) scale(1.06);
+      }
+    }
+
+    /* Keep primary centerpiece glow anchored around screen center while gently pulsing */
+    .glow-primary {
+      animation: pulseCenterGlow 9s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseCenterGlow {
+      0% {
+        transform: translate(-50%, -50%) scale(0.96);
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1.08);
+      }
+    }
+
+    #starfield-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .discord-card {
+      background: linear-gradient(155deg, rgba(49, 46, 129, 0.42) 0%, rgba(15, 23, 42, 0.88) 55%, rgba(30, 27, 75, 0.45) 100%);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow:
+        0 0 0 1px rgba(129, 140, 248, 0.32),
+        0 25px 70px -15px rgba(79, 70, 229, 0.48),
+        inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    }
+  </style>
+</head>
+<body class="relative flex min-h-screen w-full items-center justify-center bg-[#050811] p-4 sm:p-6 font-sans antialiased">
+  <!-- Ambient Glow Layers -->
+  <div class="ambient-glow glow-primary" aria-hidden="true"></div>
+  <div class="ambient-glow glow-accent" aria-hidden="true"></div>
+  <div class="ambient-glow glow-secondary" aria-hidden="true"></div>
+
+  <!-- Subtle Animated Starfield Canvas -->
+  <canvas id="starfield-canvas" aria-hidden="true"></canvas>
+
+  <!-- Non-blocking Notice Pill (replaces alert/confirm) -->
+  <div
+    id="notice-pill"
+    role="status"
+    aria-live="polite"
+    class="fixed bottom-5 left-1/2 z-30 -translate-x-1/2 rounded-full border border-indigo-300/35 bg-slate-900/95 px-4 py-2 text-xs font-semibold text-indigo-100 shadow-xl backdrop-blur-md transition-all duration-200 opacity-0 translate-y-2 pointer-events-none"
+  ></div>
+
+  <!-- Centered Discord Tile -->
+  <main class="relative z-10 flex w-full max-w-md flex-col items-center justify-center">
+    <section
+      aria-label="Discord Launcher"
+      class="discord-card flex w-full flex-col items-center rounded-3xl p-7 sm:p-9 text-center transition duration-200"
+    >
+      <!-- Crisp Prominent Discord Icon -->
+      <div class="mb-5 flex h-24 w-24 sm:h-28 sm:w-28 items-center justify-center rounded-3xl border border-indigo-300/40 bg-indigo-500/20 text-indigo-200 shadow-xl shadow-indigo-600/30">
+        <svg viewBox="0 0 24 24" class="h-14 w-14 sm:h-16 sm:w-16 fill-current" aria-hidden="true">
+          <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+        </svg>
+      </div>
+
+      <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">Discord</h1>
+
+      <!-- Explicit Launch Controls: New Window, New Tab, Same Tab -->
+      <div class="mt-7 flex w-full flex-col gap-2.5 sm:flex-row sm:justify-center">
+        <button
+          id="open-new-window-btn"
+          type="button"
+          class="flex-1 rounded-xl bg-indigo-500 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/35 transition hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        >
+          New Window
+        </button>
+
+        <a
+          id="open-new-tab-link"
+          href="https://discord.com/app"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex-1 inline-flex items-center justify-center rounded-xl border border-indigo-300/35 bg-indigo-950/75 px-4 py-3 text-sm font-semibold text-indigo-100 transition hover:bg-indigo-900/90 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        >
+          New Tab
+        </a>
+
+        <a
+          id="open-same-tab-link"
+          href="https://discord.com/app"
+          target="_self"
+          class="flex-1 inline-flex items-center justify-center rounded-xl border border-slate-700 bg-slate-900/85 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:border-indigo-300/45 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        >
+          Same Tab
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const DISCORD_URL = 'https://discord.com/app';
+
+      // Subtle animated stars in the background
+      const canvas = document.getElementById('starfield-canvas');
+      const ctx = canvas ? canvas.getContext('2d') : null;
+      let stars = [];
+
+      function initStars() {
+        if (!canvas) return;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        const count = Math.min(90, Math.max(30, Math.floor((canvas.width * canvas.height) / 18000)));
+        stars = Array.from({ length: count }, () => ({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          r: Math.random() * 1.6 + 0.5,
+          alpha: Math.random() * 0.65 + 0.15,
+          deltaAlpha: (Math.random() * 0.012 + 0.003) * (Math.random() > 0.5 ? 1 : -1),
+          vy: -(Math.random() * 0.18 + 0.04),
+        }));
+      }
+
+      function renderStars() {
+        if (ctx && canvas && canvas.width > 0 && canvas.height > 0) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          for (let i = 0; i < stars.length; i++) {
+            const s = stars[i];
+            s.y += s.vy;
+            s.alpha += s.deltaAlpha;
+
+            if (s.alpha >= 0.85 || s.alpha <= 0.12) {
+              s.deltaAlpha *= -1;
+            }
+            if (s.y < -4) {
+              s.y = canvas.height + 4;
+              s.x = Math.random() * canvas.width;
+            }
+
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(226, 232, 240, ${Math.max(0.1, Math.min(0.9, s.alpha))})`;
+            ctx.fill();
+          }
+        }
+        requestAnimationFrame(renderStars);
+      }
+
+      window.addEventListener('resize', initStars);
+      initStars();
+      renderStars();
+
+      // Non-blocking status pill helper
+      const noticeEl = document.getElementById('notice-pill');
+      let noticeTimer = null;
+
+      function showNotice(text) {
+        if (!noticeEl) return;
+        noticeEl.textContent = text;
+        noticeEl.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
+        noticeEl.classList.add('opacity-100', 'translate-y-0');
+        clearTimeout(noticeTimer);
+        noticeTimer = setTimeout(() => {
+          noticeEl.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
+          noticeEl.classList.remove('opacity-100', 'translate-y-0');
+        }, 2800);
+      }
+
+      function openNewTabFallback() {
+        try {
+          const tab = window.open(DISCORD_URL, '_blank', 'noopener,noreferrer');
+          if (!tab) {
+            window.location.assign(DISCORD_URL);
+          }
+        } catch (_err) {
+          window.location.assign(DISCORD_URL);
+        }
+      }
+
+      function openDiscordWindow() {
+        try {
+          const availW = window.screen && window.screen.availWidth ? window.screen.availWidth : 1280;
+          const availH = window.screen && window.screen.availHeight ? window.screen.availHeight : 800;
+          const width = Math.min(1160, Math.max(720, Math.floor(availW * 0.72)));
+          const height = Math.min(820, Math.max(540, Math.floor(availH * 0.8)));
+          const left = Math.max(0, Math.floor((availW - width) / 2));
+          const top = Math.max(0, Math.floor((availH - height) / 2));
+          const features = `width=${width},height=${height},left=${left},top=${top},noopener,noreferrer,resizable=yes,scrollbars=yes`;
+
+          const win = window.open(DISCORD_URL, 'DiscordLaunchWindow', features);
+          if (!win || win.closed || typeof win.closed === 'undefined') {
+            showNotice('Popup blocked — opening Discord in a new tab.');
+            openNewTabFallback();
+          } else {
+            win.focus();
+          }
+        } catch (_err) {
+          showNotice('Opening Discord in a new tab.');
+          openNewTabFallback();
+        }
+      }
+
+      const newWindowBtn = document.getElementById('open-new-window-btn');
+      if (newWindowBtn) {
+        newWindowBtn.addEventListener('click', openDiscordWindow);
+      }
+    })();
+  </script>
+</body>
+</html>
